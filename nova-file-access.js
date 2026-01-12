@@ -1,37 +1,33 @@
-// Filename: index.js
-const fs = require('fs').promises;
-const path = require('path');
+// nova-file-access.js
+(function() {
+    const fs = require('fs');
+    const path = require('path');
 
-const handler = async (command, args) => {
-    if (command !== '/list' && command !== '/read') {
-        return { is_valid: false };
-    }const fullPath = args.join(' ');
-
-if (!fullPath || !path.isAbsolute(fullPath)) {
-    return { is_valid: true, response: "Error: Please provide an absolute path (e.g., C:\\Users\\Ryan\\Desktop)." };
-}
-
-try {
-    let responseText = '';
-    if (command === '/list') {
-        const files = await fs.readdir(fullPath);
-        responseText = files.length === 0 ? `Directory is empty: "${fullPath}"` : `Listing for "${fullPath}":\n- ${files.join('\n- ')}`;
+    function listFiles(args) {
+        const targetPath = args.join(' ') || '.';
+        try {
+            const files = fs.readdirSync(targetPath);
+            return `Files in ${path.resolve(targetPath)}:\n${files.join('\n')}`;
+        } catch (error) {
+            return `Error listing files: ${error.message}`;
+        }
     }
 
-    if (command === '/read') {
-        const content = await fs.readFile(fullPath, 'utf8');
-        responseText = `Contents of "${fullPath}":\n\n---\n${content}\n---`;
+    function readFile(args) {
+        const filePath = args.join(' ');
+        if (!filePath) {
+            return 'Error: Please provide a file path to read.';
+        }
+        try {
+            const content = fs.readFileSync(filePath, 'utf8');
+            return `Content of ${path.resolve(filePath)}:\n\n${content}`;
+        } catch (error) {
+            return `Error reading file: ${error.message}`;
+        }
     }
 
-    return { is_valid: true, response: responseText };
+    registerSlashCommand('list', listFiles, ['all'], '<path>', 'Lists files in a directory. Defaults to the current directory.');
+    registerSlashCommand('read', readFile, ['all'], '<file_path>', 'Reads the content of a specified file.');
 
-} catch (error) {
-    console.error("NOVA File Access Plugin Error:", error);
-    return { is_valid: true, response: `Error accessing path "${fullPath}".\nDetails: ${error.message}` };
-}
-};
-
-// This time, we only export the handler. The package.json provides the rest.
-module.exports = {
-    handler: handler,
-};
+    console.log('NOVA File Access Plugin loaded successfully.');
+})();
